@@ -1,0 +1,11 @@
+version: '3'
+services:
+  app:
+    build: .
+    volumes:
+      - .:/app       # Mount local ./app directory to /app in container
+      - /app/node_modules # Exclude node_modules from the volume mount by mounting it as a separate volume
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    tty: true
