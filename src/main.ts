@@ -1,8 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import AppConfig from './config/app.config';
 
 async function bootstrap() {
+  console.log(AppConfig.MONGO_URI);
   const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(AppConfig.PORT);
 }
-bootstrap();
+void bootstrap();
