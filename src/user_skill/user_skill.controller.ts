@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { UserSkillService } from './user_skill.service';
 import { CreateUserSkillDto } from './dto/create-user_skill.dto';
 import { UpdateUserSkillDto } from './dto/update-user_skill.dto';
@@ -23,7 +31,10 @@ export class UserSkillController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserSkillDto: UpdateUserSkillDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateUserSkillDto: UpdateUserSkillDto,
+  ) {
     return this.userSkillService.update(+id, updateUserSkillDto);
   }
 
