@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -19,13 +20,19 @@ export class PostController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post()
-  create(@Body() createPostDto: CreatePostDto) {
-    return this.postService.create(createPostDto);
+  create(
+    @Body() createPostDto: CreatePostDto,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.postService.create(createPostDto, req.user.userId);
   }
 
+  //!Fix asap
   @UseGuards(AuthGuard('jwt'))
   @Get()
-  findAll() {
+  findAll(@Request() req: { user: { userId: string } }) {
+    const userId = req.user.userId;
+    console.log('User ID:', userId);
     return this.postService.findAll();
   }
 

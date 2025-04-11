@@ -12,7 +12,7 @@ export class Post {
   @Prop({ required: true })
   content: string;
 
-  @Prop({ type: schema.Types.ObjectId, ref: User.name })
+  @Prop({ type: schema.Types.ObjectId, ref: User.name, required: true })
   user: User;
 }
 
