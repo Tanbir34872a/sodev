@@ -1,16 +1,19 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { InjectModel } from '@nestjs/mongoose';
+import { LoginDto } from './dto/login.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name)
     private readonly userModel: Model<User>,
+    private readonly jwtService: JwtService,
   ) {}
   private readonly logger = new Logger(UserService.name);
 
@@ -56,6 +59,50 @@ export class UserService {
       this.logger.error('Error creating user', error.stack);
       throw new Error('Error creating user');
     }
+  }
+
+  async login(loginDto: LoginDto) {
+    this.logger.log('User login attempt');
+    this.logger.debug(`Login data: ${JSON.stringify(loginDto)}`);
+
+    const user = await this.userModel
+      .findOne({
+        $or: [
+          { username: loginDto.uname_email },
+          { email: loginDto.uname_email },
+        ],
+      })
+      .exec();
+
+    if (!user) {
+      this.logger.warn('User not found');
+      throw new NotFoundException('Username or Email is not found');
+    }
+
+    const isPasswordValid = bcrypt.compareSync(
+      loginDto.password,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      this.logger.warn('Invalid password');
+      throw new UnauthorizedException('Invalid password');
+    }
+
+    const payload = {
+      username: user.username,
+      email: user.email,
+      userId: user._id,
+    };
+    const token = this.jwtService.sign(payload);
+
+    this.logger.log('User logged in successfully');
+    return {
+      message: 'Login successful',
+      status: 200,
+      authorization: `${token}`,
+      user,
+    };
   }
 
   findAll() {
