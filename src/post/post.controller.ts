@@ -7,11 +7,14 @@ import {
   Param,
   Delete,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { Authenticated } from '@/decorators/auth.decorator';
+import { CurrentUser } from '@/decorators/current-user.decorator';
 
 @Controller('post')
 export class PostController {
@@ -19,13 +22,18 @@ export class PostController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post()
-  create(@Body() createPostDto: CreatePostDto) {
-    return this.postService.create(createPostDto);
+  create(
+    @Body() createPostDto: CreatePostDto,
+    @Request() req: { user: { userId: string } },
+  ) {
+    console.log('Req:', req);
+    return this.postService.create(createPostDto, req.user.userId);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @Authenticated()
   @Get()
-  findAll() {
+  findAll(@CurrentUser('userId') userId: string) {
+    console.log('User ID:', userId);
     return this.postService.findAll();
   }
 
