@@ -119,14 +119,90 @@ export class UserService {
     return `This action returns a #${id} user`;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
+  async update(id: number, updateUserDto: UpdateUserDto) {
     this.logger.log('Updating user');
     this.logger.debug(`User ID: ${id}`);
     this.logger.debug(`Update data: ${JSON.stringify(updateUserDto)}`);
-    return `This action updates a #${id} user`;
+
+    try {
+      const existingUser = await this.userModel.findById(id).exec();
+      if (!existingUser) {
+        this.logger.warn('User not found');
+        throw new NotFoundException('User not found');
+      }
+
+      if (
+        updateUserDto.username &&
+        updateUserDto.username !== existingUser.username
+      ) {
+        const usernameExists = await this.userModel
+          .findOne({ username: updateUserDto.username })
+          .exec();
+        if (usernameExists) {
+          this.logger.warn('Username already taken');
+          throw new ConflictException('Username already taken');
+        }
+      }
+
+      if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
+        const emailExists = await this.userModel
+          .findOne({ email: updateUserDto.email })
+          .exec();
+        if (emailExists) {
+          this.logger.warn('Email already taken');
+          throw new ConflictException('Email already taken');
+        }
+      }
+
+      const password = existingUser.password; // Keep the existing password, changing password is a separate action
+
+      Object.assign(existingUser, { updateUserDto, password });
+
+      await existingUser.save();
+
+      this.logger.log('User updated successfully');
+      this.logger.debug(`Updated user data: ${JSON.stringify(existingUser)}`);
+
+      return {
+        message: 'User updated successfully',
+        status: 200,
+        user: existingUser,
+      };
+    } catch (error) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      this.logger.error('Error updating user', error.stack);
+      throw new Error('Error updating user');
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: number) {
+    try {
+      const existingUser = await this.userModel.findById(id).exec();
+      if (!existingUser) {
+        this.logger.warn('User not found');
+        throw new NotFoundException('User not found');
+      }
+
+      existingUser.deleted = true;
+      await existingUser.save();
+      this.logger.log('User removed successfully');
+      this.logger.debug(`Removed user data: ${JSON.stringify(existingUser)}`);
+      return {
+        message: 'User removed successfully',
+        status: 200,
+        user: existingUser,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error('Error removing user', error.stack);
+      throw new Error('Error removing user');
+    }
   }
 }

@@ -14,13 +14,13 @@ export class PostService {
 
   private readonly logger = new Logger(PostService.name);
 
-  async create(createPostDto: CreatePostDto, by: string) {
+  async create(createPostDto: CreatePostDto, author: string) {
     try {
-      this.logger.log('Post created by:', by);
+      this.logger.log('Post created by:', author);
 
       const newPost = new this.postModel({
         ...createPostDto,
-        user: by,
+        user: author,
       });
       this.logger.debug('New post data:', newPost);
       await newPost.save();
@@ -39,6 +39,18 @@ export class PostService {
     try {
       this.logger.log('Fetching all posts');
       const posts = await this.postModel.find().populate('user');
+      this.logger.debug('Posts:', posts);
+      return posts;
+    } catch (error) {
+      this.logger.error('Error fetching posts:', error);
+      throw new Error('Error fetching posts');
+    }
+  }
+
+  async findByAuthor(userId: string) {
+    try {
+      this.logger.log('Fetching all posts');
+      const posts = await this.postModel.find({ user: userId });
       this.logger.debug('Posts:', posts);
       return posts;
     } catch (error) {
