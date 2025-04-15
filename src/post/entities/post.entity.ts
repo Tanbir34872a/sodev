@@ -14,6 +14,9 @@ export class Post {
 
   @Prop({ type: schema.Types.ObjectId, ref: User.name, required: true })
   user: User;
+
+  @Prop({ default: false })
+  deleted: boolean;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

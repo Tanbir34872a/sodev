@@ -13,6 +13,8 @@ import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { Authenticated } from '@/decorators/auth.decorator';
+import { CurrentUser } from '@/decorators/current-user.decorator';
 
 @Controller('post')
 export class PostController {
@@ -24,14 +26,13 @@ export class PostController {
     @Body() createPostDto: CreatePostDto,
     @Request() req: { user: { userId: string } },
   ) {
+    console.log('Req:', req);
     return this.postService.create(createPostDto, req.user.userId);
   }
 
-  //!Fix asap
-  @UseGuards(AuthGuard('jwt'))
+  @Authenticated()
   @Get()
-  findAll(@Request() req: { user: { userId: string } }) {
-    const userId = req.user.userId;
+  findAll(@CurrentUser('userId') userId: string) {
     console.log('User ID:', userId);
     return this.postService.findAll();
   }

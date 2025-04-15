@@ -4,7 +4,6 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { Post } from './entities/post.entity';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { User } from '@/user/entities/user.entity';
 
 @Injectable()
 export class PostService {
@@ -39,7 +38,7 @@ export class PostService {
   async findAll() {
     try {
       this.logger.log('Fetching all posts');
-      const posts = await this.postModel.find().populate(User.name);
+      const posts = await this.postModel.find().populate('user');
       this.logger.debug('Posts:', posts);
       return posts;
     } catch (error) {

@@ -22,6 +22,9 @@ export class User {
 
   @Prop()
   picture_url: string;
+
+  @Prop({ default: false })
+  deleted: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
