@@ -43,16 +43,131 @@ export class PostService {
   }
 
   async findAll(page: number, limit: number) {
+    // try {
+    //   this.logger.log(`Fetching posts | Page: ${page}, Limit: ${limit}`);
+
+    //   const skip = (page - 1) * limit;
+
+    //   const [posts, total] = await Promise.all([
+    //     this.postModel.find().populate('user').skip(skip).limit(limit).exec(),
+
+    //     this.postModel.countDocuments().exec(),
+    //   ]);
+    //   const totalPages = Math.ceil(total / limit);
+
+    //   return {
+    //     data: posts,
+    //     meta: {
+    //       total,
+    //       totalPages,
+    //       currentPage: page,
+    //       pageSize: limit,
+    //     },
+    //   };
+    // } catch (error) {
+    //   this.logger.error('Error fetching posts:', error);
+    //   throw new Error('Error fetching posts');
+    // }
+
     try {
       this.logger.log(`Fetching posts | Page: ${page}, Limit: ${limit}`);
 
       const skip = (page - 1) * limit;
 
       const [posts, total] = await Promise.all([
-        this.postModel.find().populate('user').skip(skip).limit(limit).exec(),
+        this.postModel
+          .aggregate([
+            {
+              $match: { deleted: false },
+            },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'user',
+              },
+            },
+            {
+              $project: {
+                'user.password': 0, // Exclude password
+              },
+            },
+            { $match: { 'user.deleted': false } },
+            {
+              $lookup: {
+                from: 'reactions',
+                localField: '_id',
+                foreignField: 'post',
+                as: 'reactions',
+              },
+            },
+            {
+              $lookup: {
+                from: 'reactions',
+                let: { postId: '$_id' },
+                pipeline: [
+                  { $match: { $expr: { $eq: ['$post', '$$postId'] } } },
+                  { $group: { _id: '$status', count: { $sum: 1 } } },
+                  {
+                    $project: {
+                      k: '$_id',
+                      v: '$count',
+                      _id: 0,
+                    },
+                  },
+                ],
+                as: 'reactions',
+              },
+            },
+            {
+              $addFields: {
+                reactions: { $arrayToObject: '$reactions' },
+              },
+            },
+            {
+              $project: {
+                'reactions.Neutral': 0,
+              },
+            }, //keeping only like and dislike, neutral can be used if we want to know if there are interactions
+            {
+              $lookup: {
+                from: 'comments',
+                let: { postId: '$_id' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: { $eq: ['$post', '$$postId'] },
+                      deleted: false,
+                    },
+                  },
+                  {
+                    $count: 'count',
+                  },
+                ],
+                as: 'comments',
+              },
+            },
+            {
+              $addFields: {
+                comments: {
+                  $cond: {
+                    if: { $gt: [{ $size: '$comments' }, 0] },
+                    then: { $arrayElemAt: ['$comments.count', 0] },
+                    else: 0,
+                  },
+                },
+              },
+            },
+            { $sort: { createdAt: -1 } }, // Sort by newest first
+            { $skip: skip },
+            { $limit: limit },
+          ])
+          .exec(),
 
         this.postModel.countDocuments().exec(),
       ]);
+
       const totalPages = Math.ceil(total / limit);
 
       return {
@@ -287,6 +402,9 @@ export class PostService {
             },
           },
         },
+        { $sort: { createdAt: -1 } }, // Sort by newest first
+        { $skip: 0 },
+        { $limit: 10 },
       ]);
       this.logger.debug('Posts:', posts);
       return posts;
