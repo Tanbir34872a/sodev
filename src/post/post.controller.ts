@@ -6,13 +6,11 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
-  Request,
+  Query,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { Authenticated } from '@/decorators/auth.decorator';
 import { CurrentUser } from '@/decorators/current-user.decorator';
 
@@ -20,24 +18,29 @@ import { CurrentUser } from '@/decorators/current-user.decorator';
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
-  @UseGuards(AuthGuard('jwt'))
+  @Get('test')
+  async test() {
+    return this.postService.test();
+  }
+
+  @Authenticated()
   @Post()
   create(
     @Body() createPostDto: CreatePostDto,
-    @Request() req: { user: { userId: string } },
+    @CurrentUser('userId') userId: string,
   ) {
-    console.log('Req:', req);
-    return this.postService.create(createPostDto, req.user.userId);
+    return this.postService.create(createPostDto, userId);
   }
 
-  @Authenticated()
   @Get()
-  findAll(@CurrentUser('userId') userId: string) {
-    console.log('User ID:', userId);
-    return this.postService.findAll();
+  findAll(@Query('page') page: string, @Query('limit') limit: string) {
+    const pageNum = parseInt(page) || 1;
+    const maxLimit = 20;
+    const limitNum = Math.min(parseInt(limit) || 10, maxLimit);
+
+    return this.postService.findAll(pageNum, limitNum);
   }
 
-  @Authenticated()
   @Get('author/:id')
   findByAuthor(@Param('id') id: string) {
     console.log('Author ID:', id);
@@ -46,16 +49,33 @@ export class PostController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.postService.findOne(+id);
+    console.log('Post ID:', id);
+    return this.postService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto) {
-    return this.postService.update(+id, updatePostDto);
-  }
-
+  @Authenticated()
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.postService.remove(+id);
+    return this.postService.remove(id);
+  }
+
+  @Authenticated()
+  @Patch('reaction')
+  async reactPost(
+    @Body() reaction: { postId: string; status: string },
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.postService.likePost(reaction.postId, userId, reaction.status);
+  }
+
+  @Authenticated()
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() updatePostDto: UpdatePostDto,
+    @CurrentUser('userId') userId: string,
+  ) {
+    console.log('Update Post ID:', id);
+    return this.postService.update(id, userId, updatePostDto);
   }
 }
