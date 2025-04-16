@@ -4,7 +4,7 @@ import { HydratedDocument, Schema as schema } from 'mongoose';
 
 export type PostDocument = HydratedDocument<Post>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Post {
   @Prop()
   title: string;
@@ -17,8 +17,6 @@ export class Post {
 
   @Prop({ default: false })
   deleted: boolean;
-
-  timestamps: true;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

@@ -1,26 +1,22 @@
-import {
-  Injectable,
-  Logger,
-  UnauthorizedException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { Post, PostDocument } from './entities/post.entity';
-import { Document, Model } from 'mongoose';
+import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { IPost } from '@/interfaces/post.interface';
 import { IError } from '@/interfaces/error.interface';
 import { isErrorResponse } from '@/utils/type-guards';
 import { IReaction } from '@/interfaces/reaction.interface';
+import { Reaction, ReactionDocument } from './entities/reaction.entity';
 
 @Injectable()
 export class PostService {
   constructor(
     @InjectModel(Post.name)
     private readonly postModel: Model<PostDocument>,
-    @InjectModel('Reaction')
-    private readonly reactionModel: Model<Document>,
+    @InjectModel(Reaction.name)
+    private readonly reactionModel: Model<ReactionDocument>,
   ) {}
 
   private readonly logger = new Logger(PostService.name);
@@ -47,16 +43,131 @@ export class PostService {
   }
 
   async findAll(page: number, limit: number) {
+    // try {
+    //   this.logger.log(`Fetching posts | Page: ${page}, Limit: ${limit}`);
+
+    //   const skip = (page - 1) * limit;
+
+    //   const [posts, total] = await Promise.all([
+    //     this.postModel.find().populate('user').skip(skip).limit(limit).exec(),
+
+    //     this.postModel.countDocuments().exec(),
+    //   ]);
+    //   const totalPages = Math.ceil(total / limit);
+
+    //   return {
+    //     data: posts,
+    //     meta: {
+    //       total,
+    //       totalPages,
+    //       currentPage: page,
+    //       pageSize: limit,
+    //     },
+    //   };
+    // } catch (error) {
+    //   this.logger.error('Error fetching posts:', error);
+    //   throw new Error('Error fetching posts');
+    // }
+
     try {
       this.logger.log(`Fetching posts | Page: ${page}, Limit: ${limit}`);
 
       const skip = (page - 1) * limit;
 
       const [posts, total] = await Promise.all([
-        this.postModel.find().populate('user').skip(skip).limit(limit).exec(),
+        this.postModel
+          .aggregate([
+            {
+              $match: { deleted: false },
+            },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'user',
+              },
+            },
+            {
+              $project: {
+                'user.password': 0, // Exclude password
+              },
+            },
+            { $match: { 'user.deleted': false } },
+            {
+              $lookup: {
+                from: 'reactions',
+                localField: '_id',
+                foreignField: 'post',
+                as: 'reactions',
+              },
+            },
+            {
+              $lookup: {
+                from: 'reactions',
+                let: { postId: '$_id' },
+                pipeline: [
+                  { $match: { $expr: { $eq: ['$post', '$$postId'] } } },
+                  { $group: { _id: '$status', count: { $sum: 1 } } },
+                  {
+                    $project: {
+                      k: '$_id',
+                      v: '$count',
+                      _id: 0,
+                    },
+                  },
+                ],
+                as: 'reactions',
+              },
+            },
+            {
+              $addFields: {
+                reactions: { $arrayToObject: '$reactions' },
+              },
+            },
+            {
+              $project: {
+                'reactions.Neutral': 0,
+              },
+            }, //keeping only like and dislike, neutral can be used if we want to know if there are interactions
+            {
+              $lookup: {
+                from: 'comments',
+                let: { postId: '$_id' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: { $eq: ['$post', '$$postId'] },
+                      deleted: false,
+                    },
+                  },
+                  {
+                    $count: 'count',
+                  },
+                ],
+                as: 'comments',
+              },
+            },
+            {
+              $addFields: {
+                comments: {
+                  $cond: {
+                    if: { $gt: [{ $size: '$comments' }, 0] },
+                    then: { $arrayElemAt: ['$comments.count', 0] },
+                    else: 0,
+                  },
+                },
+              },
+            },
+            { $sort: { createdAt: -1 } }, // Sort by newest first
+            { $skip: skip },
+            { $limit: limit },
+          ])
+          .exec(),
 
         this.postModel.countDocuments().exec(),
       ]);
+
       const totalPages = Math.ceil(total / limit);
 
       return {
@@ -88,7 +199,10 @@ export class PostService {
 
   async findOne(id: string): Promise<IPost | IError> {
     try {
-      const existingPost = await this.postModel.findOne({ _id: id });
+      const existingPost = await this.postModel.findOne({
+        _id: id,
+        deleted: false,
+      });
       if (!existingPost || existingPost.deleted) {
         this.logger.warn('Post not found');
         return {
@@ -259,6 +373,38 @@ export class PostService {
             'reactions.Neutral': 0,
           },
         }, //keeping only like and dislike, neutral can be used if we want to know if there are interactions
+        {
+          $lookup: {
+            from: 'comments',
+            let: { postId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ['$post', '$$postId'] },
+                  deleted: false,
+                },
+              },
+              {
+                $count: 'count',
+              },
+            ],
+            as: 'comments',
+          },
+        },
+        {
+          $addFields: {
+            comments: {
+              $cond: {
+                if: { $gt: [{ $size: '$comments' }, 0] },
+                then: { $arrayElemAt: ['$comments.count', 0] },
+                else: 0,
+              },
+            },
+          },
+        },
+        { $sort: { createdAt: -1 } }, // Sort by newest first
+        { $skip: 0 },
+        { $limit: 10 },
       ]);
       this.logger.debug('Posts:', posts);
       return posts;
