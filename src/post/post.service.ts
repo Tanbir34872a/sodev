@@ -1,26 +1,22 @@
-import {
-  Injectable,
-  Logger,
-  UnauthorizedException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { Post, PostDocument } from './entities/post.entity';
-import { Document, Model } from 'mongoose';
+import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { IPost } from '@/interfaces/post.interface';
 import { IError } from '@/interfaces/error.interface';
 import { isErrorResponse } from '@/utils/type-guards';
 import { IReaction } from '@/interfaces/reaction.interface';
+import { Reaction, ReactionDocument } from './entities/reaction.entity';
 
 @Injectable()
 export class PostService {
   constructor(
     @InjectModel(Post.name)
     private readonly postModel: Model<PostDocument>,
-    @InjectModel('Reaction')
-    private readonly reactionModel: Model<Document>,
+    @InjectModel(Reaction.name)
+    private readonly reactionModel: Model<ReactionDocument>,
   ) {}
 
   private readonly logger = new Logger(PostService.name);
@@ -88,7 +84,10 @@ export class PostService {
 
   async findOne(id: string): Promise<IPost | IError> {
     try {
-      const existingPost = await this.postModel.findOne({ _id: id });
+      const existingPost = await this.postModel.findOne({
+        _id: id,
+        deleted: false,
+      });
       if (!existingPost || existingPost.deleted) {
         this.logger.warn('Post not found');
         return {
@@ -259,6 +258,35 @@ export class PostService {
             'reactions.Neutral': 0,
           },
         }, //keeping only like and dislike, neutral can be used if we want to know if there are interactions
+        {
+          $lookup: {
+            from: 'comments',
+            let: { postId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ['$post', '$$postId'] },
+                  deleted: false,
+                },
+              },
+              {
+                $count: 'count',
+              },
+            ],
+            as: 'comments',
+          },
+        },
+        {
+          $addFields: {
+            comments: {
+              $cond: {
+                if: { $gt: [{ $size: '$comments' }, 0] },
+                then: { $arrayElemAt: ['$comments.count', 0] },
+                else: 0,
+              },
+            },
+          },
+        },
       ]);
       this.logger.debug('Posts:', posts);
       return posts;

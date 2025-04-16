@@ -5,7 +5,7 @@ import { Post } from './post.entity';
 
 export type ReactionDocument = HydratedDocument<Reaction>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Reaction {
   @Prop({ type: schema.Types.ObjectId, ref: User.name, required: true })
   user: User;
@@ -19,8 +19,6 @@ export class Reaction {
     default: 'Neutral',
   })
   status: string; //Like/Dislike/Neutral
-
-  timestamps: true;
 }
 
 export const ReactionSchema = SchemaFactory.createForClass(Reaction);

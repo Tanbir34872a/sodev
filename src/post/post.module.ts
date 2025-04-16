@@ -14,5 +14,6 @@ import { Reaction, ReactionSchema } from './entities/reaction.entity';
   ],
   controllers: [PostController],
   providers: [PostService],
+  exports: [PostService],
 })
 export class PostModule {}
