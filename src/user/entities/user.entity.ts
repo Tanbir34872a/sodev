@@ -25,6 +25,8 @@ export class User {
 
   @Prop({ default: false })
   deleted: boolean;
+
+  timestamps: true;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

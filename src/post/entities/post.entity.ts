@@ -17,6 +17,8 @@ export class Post {
 
   @Prop({ default: false })
   deleted: boolean;
+
+  timestamps: true;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);
