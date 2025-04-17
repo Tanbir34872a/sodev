@@ -12,5 +12,6 @@ import { Experience, ExperienceSchema } from './entities/experience.entity';
   ],
   controllers: [ExperienceController],
   providers: [ExperienceService],
+  exports: [ExperienceService],
 })
 export class ExperienceModule {}
