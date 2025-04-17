@@ -1,41 +1,50 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
 import { UserSkillService } from './user_skill.service';
-import { CreateUserSkillDto } from './dto/create-user_skill.dto';
-import { UpdateUserSkillDto } from './dto/update-user_skill.dto';
+import {
+  CreateNewUserSkillDto,
+  CreateUserSkillDto,
+} from './dto/create-user_skill.dto';
+import { Authenticated } from '@/decorators/auth.decorator';
+import { CurrentUser } from '@/decorators/current-user.decorator';
 
 @Controller('user-skill')
 export class UserSkillController {
   constructor(private readonly userSkillService: UserSkillService) {}
 
+  @Authenticated()
+  @Post('new')
+  createNewUserSkill(
+    @Body() createNewUserSkillDto: CreateNewUserSkillDto,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.userSkillService.createNewUserSkill(
+      createNewUserSkillDto,
+      userId,
+    );
+  }
+
+  @Authenticated()
   @Post()
-  create(@Body() createUserSkillDto: CreateUserSkillDto) {
-    return this.userSkillService.create(createUserSkillDto);
+  addSkillToUser(
+    @Body() createUserSkillDto: CreateUserSkillDto,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.userSkillService.addSkillToUser(createUserSkillDto, userId);
+  }
+
+  @Get('skilled/:skillId')
+  findSkilledUsers(@Param('skillId') skillId: string) {
+    return this.userSkillService.findSkilledUsers(skillId);
+  }
+
+  @Get('user/:userId')
+  findAll(@Param('userId') userId: string) {
+    return this.userSkillService.findAll(userId);
   }
 
   @Get()
-  findAll() {
-    return this.userSkillService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userSkillService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateUserSkillDto: UpdateUserSkillDto,
-  ) {
-    return this.userSkillService.update(+id, updateUserSkillDto);
+  findSkillList() {
+    return this.userSkillService.findSkillList();
   }
 
   @Delete(':id')
