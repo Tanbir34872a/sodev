@@ -43,32 +43,6 @@ export class PostService {
   }
 
   async findAll(page: number, limit: number) {
-    // try {
-    //   this.logger.log(`Fetching posts | Page: ${page}, Limit: ${limit}`);
-
-    //   const skip = (page - 1) * limit;
-
-    //   const [posts, total] = await Promise.all([
-    //     this.postModel.find().populate('user').skip(skip).limit(limit).exec(),
-
-    //     this.postModel.countDocuments().exec(),
-    //   ]);
-    //   const totalPages = Math.ceil(total / limit);
-
-    //   return {
-    //     data: posts,
-    //     meta: {
-    //       total,
-    //       totalPages,
-    //       currentPage: page,
-    //       pageSize: limit,
-    //     },
-    //   };
-    // } catch (error) {
-    //   this.logger.error('Error fetching posts:', error);
-    //   throw new Error('Error fetching posts');
-    // }
-
     try {
       this.logger.log(`Fetching posts | Page: ${page}, Limit: ${limit}`);
 
@@ -317,26 +291,116 @@ export class PostService {
     }
   }
 
-  async test() {
+  async test(startDate: string, endDate: string) {
     try {
+      const matchConditions: any = { deleted: false };
+
+      if (startDate) {
+        matchConditions.createdAt = { $gte: new Date(startDate) };
+      }
+
+      if (endDate) {
+        matchConditions.createdAt = matchConditions.createdAt
+          ? { ...matchConditions.createdAt, $lte: new Date(endDate) }
+          : { $lte: new Date(endDate) };
+      }
+
       const posts = await this.postModel.aggregate([
         {
-          $match: { deleted: false },
+          $match: matchConditions,
+        },
+        {
+          $lookup: {
+            from: 'comments',
+            let: { postId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$post', '$$postId'] },
+                      { $eq: ['$deleted', false] }, // or whatever your deleted flag is
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'comments',
+          },
+        },
+        {
+          $addFields: {
+            commenterStats: {
+              $map: {
+                input: {
+                  $map: {
+                    input: {
+                      $setUnion: ['$comments.user', []], // unique users
+                    },
+                    as: 'uid',
+                    in: {
+                      user: '$$uid',
+                      count: {
+                        $size: {
+                          $filter: {
+                            input: '$comments',
+                            as: 'c',
+                            cond: { $eq: ['$$c.user', '$$uid'] },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                as: 'stat',
+                in: '$$stat',
+              },
+            },
+          },
         },
         {
           $lookup: {
             from: 'users',
-            localField: 'user',
+            localField: 'commenterStats.user',
             foreignField: '_id',
-            as: 'user',
+            as: 'commenterDetails',
           },
         },
         {
-          $project: {
-            'user.password': 0, // Exclude password
+          $project: { 'commenterDetails.password': 0 }, // Exclude password
+        },
+        {
+          $addFields: {
+            commenterStats: {
+              $map: {
+                input: '$commenterStats',
+                as: 'stat',
+                in: {
+                  $mergeObjects: [
+                    '$$stat',
+                    {
+                      user: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$commenterDetails',
+                              as: 'userDoc',
+                              cond: { $eq: ['$$userDoc._id', '$$stat.user'] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
           },
         },
-        { $match: { 'user.deleted': false } },
+        {
+          $project: { commenterDetails: 0, comments: 0 },
+        },
         {
           $lookup: {
             from: 'reactions',
@@ -373,38 +437,6 @@ export class PostService {
             'reactions.Neutral': 0,
           },
         }, //keeping only like and dislike, neutral can be used if we want to know if there are interactions
-        {
-          $lookup: {
-            from: 'comments',
-            let: { postId: '$_id' },
-            pipeline: [
-              {
-                $match: {
-                  $expr: { $eq: ['$post', '$$postId'] },
-                  deleted: false,
-                },
-              },
-              {
-                $count: 'count',
-              },
-            ],
-            as: 'comments',
-          },
-        },
-        {
-          $addFields: {
-            comments: {
-              $cond: {
-                if: { $gt: [{ $size: '$comments' }, 0] },
-                then: { $arrayElemAt: ['$comments.count', 0] },
-                else: 0,
-              },
-            },
-          },
-        },
-        { $sort: { createdAt: -1 } }, // Sort by newest first
-        { $skip: 0 },
-        { $limit: 10 },
       ]);
       this.logger.debug('Posts:', posts);
       return posts;

@@ -19,8 +19,11 @@ export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Get('test')
-  async test() {
-    return this.postService.test();
+  async test(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    return this.postService.test(startDate, endDate);
   }
 
   @Authenticated()
