@@ -26,6 +26,11 @@ export class UserController {
     return this.userService.login(loginDto);
   }
 
+  @Post('refresh-token')
+  refreshToken(@Body('refreshToken') refreshToken: string) {
+    return this.userService.refreshToken(refreshToken);
+  }
+
   @Get()
   findAll() {
     return this.userService.findAll();
