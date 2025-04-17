@@ -10,36 +10,52 @@ import {
 import { ExperienceService } from './experience.service';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
+import { Authenticated } from '@/decorators/auth.decorator';
+import { CurrentUser } from '@/decorators/current-user.decorator';
 
 @Controller('experience')
 export class ExperienceController {
   constructor(private readonly experienceService: ExperienceService) {}
 
+  @Authenticated()
   @Post()
-  create(@Body() createExperienceDto: CreateExperienceDto) {
-    return this.experienceService.create(createExperienceDto);
+  create(
+    @Body() createExperienceDto: CreateExperienceDto,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.experienceService.create(createExperienceDto, userId);
   }
 
-  @Get()
-  findAll() {
-    return this.experienceService.findAll();
+  @Get('user/:userId')
+  findAll(@Param('userId') userId: string) {
+    return this.experienceService.findAll(userId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.experienceService.findOne(+id);
+  @Get(':experienceId')
+  findOne(@Param('experienceId') experienceId: string) {
+    return this.experienceService.findOne(experienceId);
   }
 
-  @Patch(':id')
+  @Authenticated()
+  @Patch(':experienceId')
   update(
-    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+    @Param('experienceId') experienceId: string,
     @Body() updateExperienceDto: UpdateExperienceDto,
   ) {
-    return this.experienceService.update(+id, updateExperienceDto);
+    return this.experienceService.update(
+      experienceId,
+      updateExperienceDto,
+      userId,
+    );
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.experienceService.remove(+id);
+  @Authenticated()
+  @Delete(':experienceId')
+  remove(
+    @Param('experienceId') experienceId: string,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.experienceService.remove(experienceId, userId);
   }
 }
