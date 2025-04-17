@@ -100,15 +100,62 @@ export class UserService {
       email: user.email,
       userId: user._id,
     };
-    const token = this.jwtService.sign(payload);
+    const auth_token = this.jwtService.sign(payload);
+    const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' });
 
     this.logger.log('User logged in successfully');
     return {
       message: 'Login successful',
       status: 200,
-      authorization: `${token}`,
+      auth_token: `${auth_token}`,
+      refresh_token: `${refresh_token}`,
       user,
     };
+  }
+
+  refreshToken(refreshToken: string) {
+    this.logger.log('Refreshing token');
+    this.logger.debug(`Refresh token: ${refreshToken}`);
+    try {
+      if (!refreshToken) {
+        this.logger.warn('Refresh token not provided');
+        return {
+          message: 'Refresh token not provided',
+          status: 401,
+        };
+      }
+      const payload = this.jwtService.verify(refreshToken);
+      if (!payload) {
+        this.logger.warn('Invalid refresh token');
+        return {
+          message: 'Invalid refresh token',
+          status: 401,
+        };
+      }
+      const newAuthToken = this.jwtService.sign({
+        username: payload.username,
+        email: payload.email,
+        userId: payload.userId,
+      });
+      const newRefreshToken = this.jwtService.sign(
+        {
+          username: payload.username,
+          email: payload.email,
+          userId: payload.userId,
+        },
+        { expiresIn: '7d' },
+      );
+      this.logger.log('Token refreshed successfully');
+      return {
+        message: 'Token refreshed successfully',
+        status: 200,
+        auth_token: newAuthToken,
+        refresh_token: newRefreshToken,
+      };
+    } catch (error) {
+      this.logger.error('Error refreshing token', error.stack);
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 
   findAll() {
