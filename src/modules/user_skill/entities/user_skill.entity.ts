@@ -1,6 +1,6 @@
-import { Experience } from '@/experience/entities/experience.entity';
+import { Experience } from '@/modules/experience/entities/experience.entity';
 import { Skill } from './skill.entity';
-import { User } from '@/user/entities/user.entity';
+import { User } from '@/modules/user/entities/user.entity';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as schema } from 'mongoose';
 

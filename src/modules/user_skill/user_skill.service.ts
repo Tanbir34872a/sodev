@@ -9,7 +9,7 @@ import { UserSkill, UserSkillDocument } from './entities/user_skill.entity';
 import { Model } from 'mongoose';
 import { Skill, SkillDocument } from './entities/skill.entity';
 import { CreateSkillDto } from './dto/create-skill.dto';
-import { ExperienceService } from '@/experience/experience.service';
+import { ExperienceService } from '@/modules/experience/experience.service';
 import { isErrorResponse } from '@/utils/type-guards';
 
 @Injectable()

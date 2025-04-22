@@ -1,4 +1,4 @@
-import { User } from '@/user/entities/user.entity';
+import { User } from '@/modules/user/entities/user.entity';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as schema } from 'mongoose';
 
