@@ -6,7 +6,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UserModule } from './modules/user/user.module';
 import { PostModule } from './modules/post/post.module';
 import { CommentModule } from './modules/comment/comment.module';
-import { SkillModule } from './skill/skill.module';
 import { ExperienceModule } from './modules/experience/experience.module';
 import { UserSkillModule } from './modules/user_skill/user_skill.module';
 import AppConfig from '@/config/app.config'; // Adjust the import path as necessary
@@ -24,7 +23,6 @@ import AppConfig from '@/config/app.config'; // Adjust the import path as necess
     UserModule,
     PostModule,
     CommentModule,
-    SkillModule,
     ExperienceModule,
     UserSkillModule,
   ],

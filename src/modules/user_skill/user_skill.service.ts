@@ -81,7 +81,7 @@ export class UserSkillService {
         this.logger.error('Skill not found');
         return {
           message: 'Skill not found',
-          status: 404,
+          statusCode: 404,
         };
       }
       //check if user already has the skill
