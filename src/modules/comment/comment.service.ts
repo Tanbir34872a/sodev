@@ -4,7 +4,7 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Comment, CommentDocument } from './entities/comment.entity';
-import { PostService } from '@/post/post.service';
+import { PostService } from '@/modules/post/post.service';
 import { isErrorResponse } from '@/utils/type-guards';
 import { IComment } from '@/interfaces/comment.interface';
 import { IError } from '@/interfaces/error.interface';
