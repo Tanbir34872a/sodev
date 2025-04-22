@@ -1,5 +1,5 @@
-import { User } from '@/modules/user/entities/user.entity';
-import { Post } from '@/modules/post/entities/post.entity';
+import { User } from '../../../modules/user/entities/user.entity';
+import { Post } from '../../../modules/post/entities/post.entity';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as schema } from 'mongoose';
 
