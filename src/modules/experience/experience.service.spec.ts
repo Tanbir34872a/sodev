@@ -76,6 +76,31 @@ describe('ExperienceService', () => {
       expect(result.status).toBe(201);
       expect(result.experience.title).toBe('Software Engineer');
     });
+
+    it('should throw an error if creation fails', async () => {
+      const createDto: CreateExperienceDto = {
+        title: 'Software Engineer',
+        company: 'Tech Corp',
+        description: 'Built stuff',
+        startDate: '2020-01-01',
+        endDate: '2021-01-01',
+      };
+
+      const mockSave = jest
+        .fn()
+        .mockRejectedValue(new Error('Error creating experience'));
+      const mockConstructor = jest.fn().mockImplementation(() => ({
+        ...mockExperience,
+        save: mockSave,
+      }));
+
+      // Override experienceModel constructor
+      (service as any).experienceModel = mockConstructor;
+
+      await expect(service.create(createDto, 'userId123')).rejects.toThrow(
+        'Error creating experience',
+      );
+    });
   });
 
   describe('findAll', () => {
@@ -88,6 +113,23 @@ describe('ExperienceService', () => {
 
       expect(result.status).toBe(200);
       expect(Array.isArray(result.experiences)).toBe(true);
+    });
+
+    it('should therow an error if no experiences found', async () => {
+      const mockSave = jest
+        .fn()
+        .mockRejectedValue(new Error('Error creating experience'));
+      const mockConstructor = jest.fn().mockImplementation(() => ({
+        ...mockExperience,
+        save: mockSave,
+      }));
+
+      // Override experienceModel constructor
+      (service as any).experienceModel = mockConstructor;
+
+      await expect(service.findAll('userId123')).rejects.toThrow(
+        'Error finding experiences',
+      );
     });
   });
 
@@ -113,6 +155,16 @@ describe('ExperienceService', () => {
       if (isErrorResponse(result)) {
         expect(result.statusCode).toBe(404);
       }
+    });
+
+    it('should throw an error if finding fails', async () => {
+      model.findOne.mockRejectedValueOnce(
+        new Error('Error finding experience'),
+      );
+
+      await expect(service.findOne('experienceId123')).rejects.toThrow(
+        'Error finding experience',
+      );
     });
   });
   describe('update', () => {
@@ -145,6 +197,57 @@ describe('ExperienceService', () => {
         expect(result.experience?.title).toBe('Updated Title');
       }
     });
+
+    it('should return 404 if experience not found', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue({
+        message: 'Experience not found',
+        statusCode: 404,
+      });
+
+      const result = await service.update(
+        'nonexistentId',
+        mockExperience as any,
+        'userId123',
+      );
+
+      expect(isErrorResponse(result)).toBe(true);
+      if (isErrorResponse(result)) {
+        expect(result.statusCode).toBe(404);
+      }
+    });
+
+    it('should return 403 if user not authorized', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue({
+        ...mockExperience,
+        user: 'differentUserId',
+      } as any);
+      const result = await service.update(
+        'experienceId123',
+        mockExperience as any,
+        'userId123',
+      );
+
+      if (!isErrorResponse(result)) {
+        expect(result.status).toBe(403);
+        expect(result.message).toBe('User not authorized to update experience');
+      }
+    });
+
+    it('should throw error if fails', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockExperience as any);
+      const result = await service.update(
+        'experienceId123',
+        mockExperience as any,
+        'userId123',
+      );
+      jest
+        .spyOn(model, 'findByIdAndUpdate')
+        .mockRejectedValueOnce(new Error('Error updatin experience'));
+
+      await expect(
+        service.update('experienceId123', mockExperience as any, 'userId123'),
+      ).rejects.toThrow('Error updating experience');
+    });
   });
 
   describe('remove', () => {
@@ -161,6 +264,45 @@ describe('ExperienceService', () => {
       if (!isErrorResponse(result)) {
         expect(result.status).toBe(200);
       }
+    });
+
+    it('should return 404 if experience not found', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue({
+        message: 'Experience not found',
+        statusCode: 404,
+      });
+
+      const result = await service.remove('nonexistentId', 'userId123');
+
+      expect(isErrorResponse(result)).toBe(true);
+      if (isErrorResponse(result)) {
+        expect(result.statusCode).toBe(404);
+      }
+    });
+
+    it('should return 403 if user not authorized', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue({
+        ...mockExperience,
+        user: 'differentUserId',
+      } as any);
+      const result = await service.remove('experienceId123', 'userId123');
+
+      if (!isErrorResponse(result)) {
+        expect(result.status).toBe(403);
+        expect(result.message).toBe('User not authorized to remove experience');
+      }
+    });
+
+    it('should throw error if fails', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockExperience as any);
+      const result = await service.remove('experienceId123', 'userId123');
+      jest
+        .spyOn(model, 'findByIdAndUpdate')
+        .mockRejectedValueOnce(new Error('Error removing experience'));
+
+      await expect(
+        service.remove('experienceId123', 'userId123'),
+      ).rejects.toThrow('Error removing experience');
     });
   });
 });
