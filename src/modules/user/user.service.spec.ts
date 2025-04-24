@@ -93,6 +93,21 @@ describe('UserService', () => {
 
       await expect(service.create(dto)).rejects.toThrow(ConflictException);
     });
+
+    it('should throw error for unexpected exception', async () => {
+      mockUserModel.findOne.mockReturnValue({
+        exec: jest.fn().mockRejectedValueOnce(new Error('Unexpected error')),
+      });
+
+      const dto: CreateUserDto = {
+        username: 'john_doe',
+        email: 'john@example.com',
+        password: 'password123',
+        name: 'John Doe',
+      };
+
+      await expect(service.create(dto)).rejects.toThrow(Error);
+    });
   });
 
   describe('login', () => {
@@ -148,6 +163,29 @@ describe('UserService', () => {
   });
 
   describe('refreshToken', () => {
+    it('should return 401 if no token is provided', () => {
+      const result = service.refreshToken('');
+
+      expect(result.status).toBe(401);
+      expect(result.message).toBe('Refresh token not provided');
+    });
+
+    it('should return 401 if token is invalid', () => {
+      const paylaod = jwtServiceMock.verify.mockReturnValueOnce(null);
+
+      // if (!paylaod) {
+      //   expect(service.refreshToken('invalid_token')).resolves.toEqual({
+      //     status: 401,
+      //     message: 'Invalid token',
+      //   });
+      // }
+
+      const result = service.refreshToken('invalid_token');
+
+      expect(result.status).toBe(401);
+      expect(result.message).toBe('Invalid refresh token');
+    });
+
     it('should return new tokens', () => {
       const payload = {
         username: 'john',
@@ -176,6 +214,130 @@ describe('UserService', () => {
     });
   });
 
+  describe('update', () => {
+    it('should update user successfully', async () => {
+      const id = 1;
+      const updateUserDto = {
+        username: 'new_username',
+        email: 'new_email@example.com',
+        name: 'New Name',
+      };
+
+      const existingUser = {
+        _id: id,
+        username: 'old_username',
+        email: 'old_email@example.com',
+        password: 'hashed_password',
+        save: jest.fn(),
+      };
+
+      mockUserModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(existingUser),
+      });
+
+      mockUserModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      const result = await service.update(id, updateUserDto);
+
+      console.log('resuslt:', result);
+      console.log('existingUser:', existingUser);
+      console.log('updateUserDto:', updateUserDto);
+
+      expect(result.message).toBe('User updated successfully');
+      expect(result.status).toBe(200);
+      expect(existingUser.username).toBe(updateUserDto.username);
+      expect(existingUser.email).toBe(updateUserDto.email);
+      expect(existingUser.save).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if user does not exist', async () => {
+      const id = 1;
+      const updateUserDto = {
+        username: 'new_username',
+        email: 'new_email@example.com',
+      };
+
+      mockUserModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(service.update(id, updateUserDto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw ConflictException if username is already taken', async () => {
+      const id = 1;
+      const updateUserDto = {
+        username: 'existing_username',
+      };
+
+      const existingUser = {
+        _id: id,
+        username: 'old_username',
+        email: 'old_email@example.com',
+        password: 'hashed_password',
+        save: jest.fn(),
+      };
+
+      mockUserModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(existingUser),
+      });
+
+      mockUserModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ username: 'existing_username' }),
+      });
+
+      await expect(service.update(id, updateUserDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should throw ConflictException if email is already taken', async () => {
+      const id = 1;
+      const updateUserDto = {
+        email: 'existing_email@example.com',
+      };
+
+      const existingUser = {
+        _id: id,
+        username: 'old_username',
+        email: 'old_email@example.com',
+        password: 'hashed_password',
+        save: jest.fn(),
+      };
+
+      mockUserModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(existingUser),
+      });
+
+      mockUserModel.findOne.mockReturnValue({
+        exec: jest
+          .fn()
+          .mockResolvedValue({ email: 'existing_email@example.com' }),
+      });
+
+      await expect(service.update(id, updateUserDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should throw error for unexpected exception', async () => {
+      const id = 1;
+      const updateUserDto = {
+        username: 'new_username',
+      };
+
+      mockUserModel.findById.mockReturnValue({
+        exec: jest.fn().mockRejectedValueOnce(new Error('Unexpected error')),
+      });
+
+      await expect(service.update(id, updateUserDto)).rejects.toThrow(Error);
+    });
+  });
+
   describe('remove', () => {
     it('should mark user as deleted', async () => {
       const user = {
@@ -200,6 +362,14 @@ describe('UserService', () => {
       });
 
       await expect(service.remove(1)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw error for unexpected exception', async () => {
+      mockUserModel.findById.mockReturnValue({
+        exec: jest.fn().mockRejectedValueOnce(new Error('Unexpected error')),
+      });
+
+      await expect(service.remove(1)).rejects.toThrow(Error);
     });
   });
 });

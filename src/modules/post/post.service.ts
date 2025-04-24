@@ -282,8 +282,6 @@ export class PostService {
           message: 'User already reacted with the same reaction',
           status: 400,
         };
-      } else {
-        throw new Error();
       }
     } catch (error) {
       this.logger.error('Error liking post:', error);
