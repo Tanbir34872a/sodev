@@ -158,13 +158,13 @@ export class UserService {
     }
   }
 
-  findAll() {
-    return `This action returns all user`;
-  }
+  // findAll() {
+  //   return `This action returns all user`;
+  // }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
+  // findOne(id: number) {
+  //   return `This action returns a #${id} user`;
+  // }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
     this.logger.log('Updating user');
@@ -203,7 +203,7 @@ export class UserService {
 
       const password = existingUser.password; // Keep the existing password, changing password is a separate action
 
-      Object.assign(existingUser, { updateUserDto, password });
+      Object.assign(existingUser, updateUserDto, { password });
 
       await existingUser.save();
 

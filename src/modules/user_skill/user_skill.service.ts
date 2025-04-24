@@ -181,7 +181,7 @@ export class UserSkillService {
     }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} userSkill`;
-  }
+  // remove(id: number) {
+  //   return `This action removes a #${id} userSkill`;
+  // }
 }
