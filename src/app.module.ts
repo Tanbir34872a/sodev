@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserModule } from './modules/user/user.module';
@@ -27,6 +26,5 @@ import AppConfig from '@/config/app.config'; // Adjust the import path as necess
     UserSkillModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

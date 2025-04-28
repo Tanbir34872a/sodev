@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { UserSkillService } from './user_skill.service';
 import {
   CreateNewUserSkillDto,
@@ -47,8 +47,8 @@ export class UserSkillController {
     return this.userSkillService.findSkillList();
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userSkillService.remove(+id);
-  }
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.userSkillService.remove(+id);
+  // }
 }
