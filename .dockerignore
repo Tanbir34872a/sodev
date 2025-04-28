@@ -4,3 +4,4 @@ docker-compose.yml
 Dockerfile
 .git
 .gitignore
+.env*
